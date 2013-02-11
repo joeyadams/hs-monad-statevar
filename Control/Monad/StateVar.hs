@@ -47,12 +47,12 @@ class HasPut m v where
     -- | Write a new value to the variable.
     put :: v a -> a -> m ()
 
--- | @'lift' $ 'get' v@
+-- | 'lift' $ 'get' v
 instance (HasGet m v, MonadTrans t, Monad m) => HasGet (t m) v where
     get v = lift $ get v
     {-# INLINE get #-}
 
--- | @'lift' $ 'put' v a@
+-- | 'lift' $ 'put' v a
 instance (HasPut m v, MonadTrans t, Monad m) => HasPut (t m) v where
     put v a = lift $ put v a
     {-# INLINE put #-}
