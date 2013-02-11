@@ -49,13 +49,15 @@ testStateVar var = do
     5 <- get var
     var $~! (+1)
     6 <- get var
+    6 <- swap var 7
+    7 <- get var
 
     case tryErrorCall of
         Nothing -> return ()
         Just tryE -> do
             Left (ErrorCall _) <- tryE $ do
                 put' var undefined
-            6 <- get var
+            7 <- get var
 
             -- These tests assume the var may contain 'undefined'.
             modify var (\_ -> undefined)
@@ -66,6 +68,30 @@ testStateVar var = do
                 modify' var (+1)
             return ()
 
+-- testIORef and testSTRef just make sure casual usage type check without
+-- confusing ambiguities.
+
+testIORef :: IO ()
+testIORef = do
+    var <- newIORef (5 :: Int)
+    5 <- get var
+    put var 6
+    6 <- get var
+    modify var (+3)
+    9 <- get var
+    return ()
+
+testSTRef :: IO ()
+testSTRef = do
+    9 <- return $ runST $ do
+        var <- newSTRef (5 :: Int)
+        5 <- get var
+        put var 6
+        6 <- get var
+        modify var (+3)
+        get var
+    return ()
+
 main :: IO ()
 main = do
     testSafe
@@ -73,4 +99,7 @@ main = do
     atomically $ newTVar 0 >>= testStateVar
     () <- return $ runST $ newSTRef 0 >>= testStateVar
     () <- return $ L.runST $ L.newSTRef 0 >>= testStateVar
-    return ()
+    testIORef
+    testSTRef
+
+    putStrLn "Passed."
