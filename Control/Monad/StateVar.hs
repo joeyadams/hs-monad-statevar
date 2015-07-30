@@ -28,7 +28,7 @@ import GHC.Conc (STM, TVar, readTVar, writeTVar)
 -- import Control.Concurrent.STM
 import Data.IORef
 
-#if MIN_VERSION_base(4,4,0)
+#if MIN_VERSION_base(4,4,0) && !MIN_VERSION_base(4,8,0)
 import qualified Control.Monad.ST.Safe as S
 import qualified Control.Monad.ST.Lazy.Safe as L
 #else
