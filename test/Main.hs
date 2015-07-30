@@ -8,7 +8,6 @@ import Control.Monad.StateVar
 import Control.Concurrent.STM
 import Data.IORef
 import Data.STRef
-import qualified Data.STRef.Lazy as L
 import Control.Exception
 import Control.Monad.ST
 import qualified Control.Monad.ST.Lazy as L
@@ -73,7 +72,7 @@ testStateVar var = do
 
 testIORef :: IO ()
 testIORef = do
-    var <- newIORef (5 :: Int)
+    var <- new 5 :: IO (IORef Int)
     5 <- get var
     put var 6
     6 <- get var
@@ -84,7 +83,7 @@ testIORef = do
 testSTRef :: IO ()
 testSTRef = do
     9 <- return $ runST $ do
-        var <- newSTRef (5 :: Int)
+        var <- new 5 :: ST s (STRef s Int)
         5 <- get var
         put var 6
         6 <- get var
@@ -95,10 +94,10 @@ testSTRef = do
 main :: IO ()
 main = do
     testSafe
-    newIORef 0 >>= testStateVar
-    atomically $ newTVar 0 >>= testStateVar
-    () <- return $ runST $ newSTRef 0 >>= testStateVar
-    () <- return $ L.runST $ L.newSTRef 0 >>= testStateVar
+    new 0 >>= testStateVar
+    atomically $ new 0 >>= testStateVar
+    () <- return $ runST $ new 0 >>= testStateVar
+    () <- return $ L.runST $ new 0 >>= testStateVar
     testIORef
     testSTRef
 

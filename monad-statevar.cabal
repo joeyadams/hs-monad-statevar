@@ -1,5 +1,5 @@
 name:                monad-statevar
-version:             0.1
+version:             0.1.1
 synopsis:            Concise, overloaded accessors for IORef, STRef, TVar
 description:
     Overloaded 'get' and 'put' for state variables ('IORef', 'STRef', 'TVar')

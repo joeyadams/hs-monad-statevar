@@ -10,7 +10,9 @@ module Control.Monad.StateVar (
     -- * Overloaded get and put
     HasGet(..),
     HasPut(..),
+    HasNew(..),
     put',
+    new',
     modify,
     modify',
     swap,
@@ -24,11 +26,11 @@ module Control.Monad.StateVar (
 ) where
 
 import Control.Monad.Trans.Class
-import GHC.Conc (STM, TVar, readTVar, writeTVar)
+import GHC.Conc (STM, TVar, readTVar, writeTVar, newTVar)
 -- import Control.Concurrent.STM
 import Data.IORef
 
-#if MIN_VERSION_base(4,4,0)
+#if MIN_VERSION_base(4,4,0) && !MIN_VERSION_base(4,8,0)
 import qualified Control.Monad.ST.Safe as S
 import qualified Control.Monad.ST.Lazy.Safe as L
 #else
@@ -47,6 +49,10 @@ class HasPut m v where
     -- | Write a new value to the variable.
     put :: v a -> a -> m ()
 
+class HasNew m v where
+    -- | Create a new variable.
+    new :: a -> m (v a)
+
 -- | 'lift' $ 'get' v
 instance (HasGet m v, MonadTrans t, Monad m) => HasGet (t m) v where
     get v = lift $ get v
@@ -56,6 +62,11 @@ instance (HasGet m v, MonadTrans t, Monad m) => HasGet (t m) v where
 instance (HasPut m v, MonadTrans t, Monad m) => HasPut (t m) v where
     put v a = lift $ put v a
     {-# INLINE put #-}
+
+-- | 'lift' $ 'put' v a
+instance (HasNew m v, MonadTrans t, Monad m) => HasNew (t m) v where
+    new a = lift $ new a
+    {-# INLINE new #-}
 
 -- | 'readIORef'
 instance HasGet IO IORef where
@@ -67,6 +78,11 @@ instance HasPut IO IORef where
     put = writeIORef
     {-# INLINE put #-}
 
+-- | 'newIORef'
+instance HasNew IO IORef where
+    new = newIORef
+    {-# INLINE new #-}
+
 -- | 'readTVar'
 instance HasGet STM TVar where
     get = readTVar
@@ -76,6 +92,11 @@ instance HasGet STM TVar where
 instance HasPut STM TVar where
     put = writeTVar
     {-# INLINE put #-}
+
+-- | 'newTVar'
+instance HasNew STM TVar where
+    new = newTVar
+    {-# INLINE new #-}
 
 -- | 'S.readSTRef'
 instance HasGet (S.ST s) (STRef s) where
@@ -87,6 +108,11 @@ instance HasPut (S.ST s) (STRef s) where
     put = S.writeSTRef
     {-# INLINE put #-}
 
+-- | 'S.newSTRef'
+instance HasNew (S.ST s) (STRef s) where
+    new = S.newSTRef
+    {-# INLINE new #-}
+
 -- | 'L.readSTRef'
 instance HasGet (L.ST s) (STRef s) where
     get = L.readSTRef
@@ -97,10 +123,20 @@ instance HasPut (L.ST s) (STRef s) where
     put = L.writeSTRef
     {-# INLINE put #-}
 
+-- | 'L.newSTRef'
+instance HasNew (L.ST s) (STRef s) where
+    new = L.newSTRef
+    {-# INLINE new #-}
+
 -- | Variant of 'put' that forces the value before writing it.
 put' :: HasPut m v => v a -> a -> m ()
 put' v x = x `seq` put v x
 {-# INLINE put' #-}
+
+-- | Variant of 'new' that forces the value before creating a variable with it.
+new' :: HasNew m v => a -> m (v a)
+new' x = x `seq` new x
+{-# INLINE new' #-}
 
 -- | Modify the value inside the variable with the given function.
 --
@@ -122,9 +158,9 @@ modify' v f = do
 
 -- | Write a new value and return the old value.
 swap :: (HasGet m v, HasPut m v, Monad m) => v a -> a -> m a
-swap var new = do
+swap var newVal = do
     old <- get var
-    put var new
+    put var newVal
     return old
 {-# INLINE swap #-}
 
